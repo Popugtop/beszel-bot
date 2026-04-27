@@ -264,23 +264,36 @@ class BeszelClient:
                             "POST", "/api/realtime",
                             json_body={
                                 "clientId": client_id,
-                                "subscriptions": ["systems/*"],
+                                # PocketBase: имя коллекции без wildcard для подписки на все записи
+                                "subscriptions": ["systems"],
                             },
                         )
                         subscribed = True
-                        logger.info("SSE: подписка на systems/* активирована (clientId=%s)", client_id)
+                        logger.info("SSE: подписка на systems активирована (clientId=%s)", client_id)
                     except BeszelAPIError as e:
                         logger.error("SSE: не удалось подписаться: %s", e)
                         return
 
-                elif event.event == "systems" and subscribed:
+                elif event.event.startswith("systems") and subscribed:
+                    # PocketBase шлёт event: "systems" или "systems/RECORD_ID"
                     try:
                         payload = event.parse_json()
                         action: str = payload.get("action", "")
                         record: dict = payload.get("record", {})
 
                         if action and record:
+                            logger.debug(
+                                "SSE event: %s %s (%s → %s)",
+                                action,
+                                record.get("name", record.get("id", "?")),
+                                record.get("host", ""),
+                                record.get("status", "?"),
+                            )
                             yield action, record
 
                     except (json.JSONDecodeError, KeyError) as e:
                         logger.warning("SSE: не удалось распарсить событие: %s — %s", event.data[:100], e)
+
+                elif event.event and event.event not in ("", "PB_CONNECT"):
+                    # Логируем неизвестные события для диагностики
+                    logger.debug("SSE: неизвестный тип события: %r (subscribed=%s)", event.event, subscribed)
