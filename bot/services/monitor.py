@@ -210,7 +210,7 @@ class Monitor:
             prev_status = prev.get("status", "unknown")
 
             if prev_status != new_status:
-                duration = _calc_duration(prev.get("updated_at"))
+                duration = prev.get("info", {}).get("uptime") if new_status == "down" else None
                 events.append(_make_event(new_status, node_id, new_name, new_host, prev_status, new_status, now_utc, duration))
 
         for node_id, prev in self._current_states.items():
@@ -271,7 +271,9 @@ class Monitor:
 
             if prev_status != new_status:
                 # Статус изменился — алерт
-                duration = _calc_duration(prev.get("updated_at") if prev else None)
+                # Для down: берём реальный аптайм ОС из метрик
+                # Для up: время даунтайма надёжно не определить, оставляем None
+                duration = prev.get("info", {}).get("uptime") if new_status == "down" and prev else None
                 logger.info(
                     "SSE update: %s %s → %s (за %s)",
                     node_name, prev_status, new_status,
@@ -365,19 +367,3 @@ def _make_event(
         "duration_seconds": duration_seconds,
         "timestamp": timestamp,
     }
-
-
-def _calc_duration(updated_at: str | None) -> float | None:
-    """Вычисляет сколько секунд прошло с момента последнего обновления."""
-    if not updated_at:
-        return None
-    try:
-        s = updated_at.replace("Z", "+00:00").replace(" ", "T")
-        if "." in s:
-            s = s.split(".")[0] + "+00:00"
-        dt = datetime.fromisoformat(s)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return (datetime.now(timezone.utc) - dt).total_seconds()
-    except (ValueError, TypeError):
-        return None

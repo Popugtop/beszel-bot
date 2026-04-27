@@ -141,6 +141,16 @@ def _mb_to_human(mb: float) -> str:
     return f"{mb:.0f} МБ"
 
 
+def _sanitize_host(host: str) -> str:
+    """Возвращает читаемое значение хоста. Если поле содержит пробел (например,
+    команду установки агента) или слишком длинное — показывает '—'."""
+    if not host:
+        return "—"
+    if " " in host or len(host) > 253:
+        return "—"
+    return host
+
+
 def format_node_alert(
     event_type: str,
     node_name: str,
@@ -152,6 +162,7 @@ def format_node_alert(
     """Форматирует сообщение алерта об изменении статуса ноды."""
     icon = get_event_icon(event_type)
     now = now_in_tz(tz).strftime("%Y-%m-%d %H:%M:%S")
+    host = _sanitize_host(host)
 
     if event_type == "down":
         title = "Нода DOWN"
@@ -200,6 +211,7 @@ def format_new_node_alert(node_name: str, host: str, status: str, beszel_url: st
     """Форматирует сообщение об обнаружении новой ноды."""
     icon = get_status_icon(status)
     now = now_in_tz(tz).strftime("%Y-%m-%d %H:%M:%S")
+    host = _sanitize_host(host)
     return (
         f"🆕 <b>Обнаружена новая нода</b>\n\n"
         f"📛 Имя: <code>{node_name}</code>\n"
