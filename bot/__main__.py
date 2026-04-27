@@ -25,6 +25,7 @@ def setup_logging(log_level: str) -> None:
     )
     logging.getLogger("aiogram").setLevel(logging.WARNING)
     logging.getLogger("aiohttp").setLevel(logging.WARNING)
+    logging.getLogger("aiosqlite").setLevel(logging.WARNING)
 
 
 logger = logging.getLogger(__name__)
