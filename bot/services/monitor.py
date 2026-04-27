@@ -166,6 +166,14 @@ class Monitor:
         new_states = {s["id"]: s for s in systems}
 
         if not self._initialized:
+            # Дамп первой записи для диагностики полей API (только в DEBUG)
+            if systems and logger.isEnabledFor(logging.DEBUG):
+                sample = systems[0]
+                logger.debug(
+                    "Пример записи Beszel API (поля): %s",
+                    {k: v for k, v in sample.items() if k not in ("collectionId", "collectionName")},
+                )
+
             # Первый старт — просто сохраняем базовое состояние
             await self._save_states(new_states)
             self._current_states = {
